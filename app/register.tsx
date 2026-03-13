@@ -1,5 +1,5 @@
 import { Ionicons } from '@expo/vector-icons';
-import AsyncStorage from '@react-native-async-storage/async-storage'; // 🌟 1. นำเข้า AsyncStorage
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useRouter } from 'expo-router';
 import React, { useState } from 'react';
 import { Alert, KeyboardAvoidingView, Platform, SafeAreaView, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
@@ -11,29 +11,54 @@ export default function RegisterScreen() {
   const [password, setPassword] = useState('');
 
   const handleRegister = async () => {
+    // 1. เช็กว่ากรอกข้อมูลครบไหม
     if (!username || !email || !password) {
       Alert.alert('แจ้งเตือน', 'กรุณากรอกข้อมูลให้ครบทุกช่อง');
       return;
     }
 
-    // 🌟 2. เซฟข้อมูล Username และ Email ลงในเครื่อง
     try {
-      const userData = {
-        name: username,
-        email: email
-      };
-      await AsyncStorage.setItem('user_data', JSON.stringify(userData));
-    } catch (error) {
-      console.error('Error saving user data', error);
-    }
+      // 2. ส่งข้อมูลไปที่ Backend
+      const response = await fetch('http://192.168.1.34:5000/api/register', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ 
+          fullname: username, // ใช้ username แทน fullname ไปก่อน
+          username: username, 
+          email: email, 
+          password: password, 
+          dob: '', gender: '', phone: '', address: '' // ส่งค่าว่างไปให้ครบตามตาราง SQL
+        }),
+      });
+      
+      const data = await response.json();
 
-    // 🌟 3. แจ้งเตือนสำเร็จ แล้วเด้งไปหน้า Home ทันที
-    Alert.alert('สำเร็จ! 🎉', 'ยินดีต้อนรับสู่ Town Pulse', [
-      { 
-        text: 'เริ่มต้นใช้งาน', 
-        onPress: () => router.replace('/(tabs)/home') // เปลี่ยนเป็น path หน้า Home ของคุณ (อาจจะเป็น '/home' เฉยๆ ก็ได้ถ้าไม่ได้ใช้ tabs)
-      } 
-    ]);
+      // 3. เช็กคำตอบจากเซิร์ฟเวอร์
+      if (data.status === 'success') {
+        // เซฟข้อมูลลงในเครื่อง
+        try {
+          const userData = { name: username, email: email };
+          await AsyncStorage.setItem('user_data', JSON.stringify(userData));
+        } catch (error) {
+          console.error('Error saving user data', error);
+        }
+
+        // แจ้งเตือนสำเร็จ แล้วเด้งไปหน้า Home ทันที
+        Alert.alert('สำเร็จ! 🎉', 'ลงทะเบียนและบันทึกฐานข้อมูลเรียบร้อย', [
+          { 
+            text: 'เริ่มต้นใช้งาน', 
+            onPress: () => router.replace('/(tabs)/home') 
+          } 
+        ]);
+      } else {
+        // แจ้งเตือน Error จาก Backend (เช่น อีเมลซ้ำ)
+        Alert.alert('เกิดข้อผิดพลาด', data.message);
+      }
+
+    } catch (error) {
+      console.error(error);
+      Alert.alert('การเชื่อมต่อล้มเหลว', 'ไม่สามารถเชื่อมต่อเซิร์ฟเวอร์ได้ กรุณาตรวจสอบว่า Backend หรือ XAMPP ทำงานอยู่');
+    }
   };
 
   return (
