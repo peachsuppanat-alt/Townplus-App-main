@@ -17,9 +17,9 @@ export default function LoginScreen() {
       return;
     }
 
-    /* // TODO: 🛠️ Backend เอาคอมเมนต์ตรงนี้ออก แล้วใส่ URL ของ PHP API
+   //ใส่ ip ให้เป็น wifi เดียวกันกับ server และมือถือ
     try {
-      const response = await fetch('http://localhost/townpulse/api/login.php', {
+      const response = await fetch('http://192.168.1.34:5000/api/login', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email: email, password: password })
@@ -35,7 +35,7 @@ export default function LoginScreen() {
     } catch (error) {
       console.error(error);
     }
-    */
+ 
 
     // 🌟 โค้ดจำลอง (Mock) ระหว่างรอเพื่อนทำ Backend: พอกด Login ให้วิ่งไปหน้า Home เลย
     console.log('Logging in with:', email, password);
