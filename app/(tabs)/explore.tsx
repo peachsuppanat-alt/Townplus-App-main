@@ -1,9 +1,9 @@
 import { Ionicons } from '@expo/vector-icons';
-import { useLocalSearchParams, useRouter } from 'expo-router';
-import React, { useEffect, useState } from 'react';
+import { useFocusEffect, useLocalSearchParams, useRouter } from 'expo-router';
+import React, { useCallback, useState } from 'react';
 import { ActivityIndicator, Image, Platform, SafeAreaView, ScrollView, StatusBar, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 
-// 🌟 เปลี่ยน id ให้เป็นตัวเลข 1-12 เพื่อให้ลิงก์ไปหน้า Detail แล้วหาเจอครับ
+// 🌟 เปลี่ยน id เป็นตัวเลข 1-12 เพื่อให้ตรงกับ Database และ MOCK ในหน้า Detail
 const MOCK_EVENTS = [
   { id: '1', title: 'งานวัดภูเขาทอง 2569', category: 'เทศกาลและงานวัด', date: '15 - 20 ก.พ.', distance: '0.5 กม.', image: 'https://cms.dmpcdn.com/travel/2024/10/22/bf86a330-9050-11ef-9ac9-8bc58bd3f671_webp_original.webp' },
   { id: '2', title: 'ตลาดนัดคลองถม', category: 'ตลาดและช้อปปิ้ง', date: 'ทุกวันศุกร์ - อาทิตย์', distance: '1.2 กม.', image: 'https://shopee.co.th/blog/wp-content/uploads/2023/08/Shopee-Blog-%E0%B8%95%E0%B8%A5%E0%B8%B2%E0%B8%94%E0%B8%82%E0%B8%AD%E0%B8%87%E0%B8%A1%E0%B8%B7%E0%B8%AD%E0%B8%AA%E0%B8%AD%E0%B8%87-%E0%B8%95%E0%B8%A5%E0%B8%B2%E0%B8%94%E0%B8%82%E0%B8%AD%E0%B8%87%E0%B9%80%E0%B8%81%E0%B9%88%E0%B8%B2-%E0%B8%95%E0%B8%A5%E0%B8%B2%E0%B8%94%E0%B8%99%E0%B8%B1%E0%B8%94.jpg' },
@@ -29,43 +29,55 @@ export default function ExploreScreen() {
   const params = useLocalSearchParams(); 
   
   const [searchQuery, setSearchQuery] = useState('');
-  
   const initialCategory = typeof params.category === 'string' ? params.category : 'ทั้งหมด';
   const [activeFilter, setActiveFilter] = useState(initialCategory);
   
   const [events, setEvents] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
-  useEffect(() => {
-    const fetchEventsData = () => {
-      setIsLoading(true);
-      
-      setTimeout(() => {
-        let result = [...MOCK_EVENTS]; 
-        
-        if (activeFilter !== 'ทั้งหมด') {
-          result = result.filter(e => e.category === activeFilter);
+  // 🌟 ใช้ useFocusEffect ดึงคะแนนดาวทุกครั้งที่กดเข้ามาหน้านี้
+  useFocusEffect(
+    useCallback(() => {
+      const fetchEventsAndRatings = async () => {
+        setIsLoading(true);
+        try {
+          // 1. ดึงคะแนนดาวเฉลี่ยจาก Backend
+          let ratingsMap: any = {};
+          try {
+            const res = await fetch('http://192.168.174.35:3000/all-ratings');
+            const data = await res.json();
+            if (data.status === 'success') {
+              data.data.forEach((r: any) => {
+                ratingsMap[r.event_id.toString()] = { avg: r.avg_rating, count: r.total_reviews };
+              });
+            }
+          } catch (e) {
+            console.error('ไม่สามารถดึงคะแนนดาวได้', e);
+          }
+
+          // 2. จับคู่ข้อมูล MOCK_EVENTS เข้ากับดาวจาก Database (ถ้าไม่มีเริ่มที่ 0.0)
+          let result = [...MOCK_EVENTS].map(e => ({
+            ...e,
+            rating: ratingsMap[e.id] ? ratingsMap[e.id].avg : '0.0',
+            reviewsCount: ratingsMap[e.id] ? ratingsMap[e.id].count : '0'
+          }));
+          
+          if (activeFilter !== 'ทั้งหมด') result = result.filter(e => e.category === activeFilter);
+          if (searchQuery.trim() !== '') result = result.filter(e => e.title.toLowerCase().includes(searchQuery.toLowerCase()));
+          
+          setEvents(result);
+        } catch (error) {
+          console.error(error);
+        } finally {
+          setIsLoading(false); 
         }
-        
-        if (searchQuery.trim() !== '') {
-          result = result.filter(e => e.title.toLowerCase().includes(searchQuery.toLowerCase()));
-        }
-        
-        setEvents(result);
-        setIsLoading(false); 
-      }, 600);
-    };
+      };
 
-    fetchEventsData();
-  }, [activeFilter, searchQuery]); 
+      fetchEventsAndRatings();
+    }, [activeFilter, searchQuery]) 
+  );
 
-  const handleFilter = (filter: string) => { 
-    setActiveFilter(filter); 
-  };
-
-  const clearSearch = () => {
-    setSearchQuery('');
-  }
+  const clearSearch = () => setSearchQuery('');
 
   return (
     <SafeAreaView style={styles.container}>
@@ -78,15 +90,11 @@ export default function ExploreScreen() {
         <View style={styles.searchBar}>
           <Ionicons name="search" size={20} color="#94A3B8" />
           <TextInput 
-            style={styles.searchInput} 
-            placeholder="ค้นหางาน, สถานที่ หรือ คอนเสิร์ต..." 
-            value={searchQuery} 
-            onChangeText={setSearchQuery} 
+            style={styles.searchInput} placeholder="ค้นหางาน, สถานที่ หรือ คอนเสิร์ต..." 
+            value={searchQuery} onChangeText={setSearchQuery} 
           />
           {searchQuery !== '' && (
-            <TouchableOpacity onPress={clearSearch}>
-              <Ionicons name="close-circle" size={20} color="#94A3B8" />
-            </TouchableOpacity>
+            <TouchableOpacity onPress={clearSearch}><Ionicons name="close-circle" size={20} color="#94A3B8" /></TouchableOpacity>
           )}
         </View>
       </View>
@@ -94,11 +102,7 @@ export default function ExploreScreen() {
       <View style={{ paddingVertical: 15 }}>
         <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ paddingHorizontal: 20 }}>
           {FILTERS.map(filter => (
-            <TouchableOpacity 
-              key={filter} 
-              onPress={() => handleFilter(filter)}
-              style={[styles.filterChip, activeFilter === filter && styles.activeFilterChip]}
-            >
+            <TouchableOpacity key={filter} onPress={() => setActiveFilter(filter)} style={[styles.filterChip, activeFilter === filter && styles.activeFilterChip]}>
               <Text style={[styles.filterText, activeFilter === filter && styles.activeFilterText]}>{filter}</Text>
             </TouchableOpacity>
           ))}
@@ -115,22 +119,23 @@ export default function ExploreScreen() {
       ) : (
         <ScrollView contentContainerStyle={styles.listContainer} showsVerticalScrollIndicator={false}>
           {events.map(event => (
-            <TouchableOpacity 
-              key={event.id} 
-              style={styles.eventCard} 
-              onPress={() => router.push({ pathname: '/event/[id]', params: { id: event.id } })}
-            >
+            <TouchableOpacity key={event.id} style={styles.eventCard} onPress={() => router.push({ pathname: '/event/[id]', params: { id: event.id } })}>
               <Image source={{ uri: event.image }} style={styles.eventImage} />
               <View style={styles.eventInfo}>
-                <Text style={styles.eventCategory}>{event.category}</Text>
+                <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <Text style={styles.eventCategory}>{event.category}</Text>
+                  {/* 🌟 แสดงดาวตรงนี้ เริ่มที่ 0.0 */}
+                  <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                    <Ionicons name="star" size={12} color="#FBBF24" />
+                    <Text style={{ fontFamily: 'Prompt_700Bold', fontSize: 12, color: '#D97706', marginLeft: 4 }}>{event.rating}</Text>
+                  </View>
+                </View>
                 <Text style={styles.eventTitle} numberOfLines={2}>{event.title}</Text>
-                
                 <View style={styles.eventFooter}>
                   <View style={styles.iconTextRow}>
                     <Ionicons name="calendar-outline" size={14} color="#64748B" />
                     <Text style={styles.eventDate}>{event.date}</Text>
                   </View>
-                  
                   <View style={styles.iconTextRow}>
                     <Ionicons name="location" size={14} color="#FF385C" />
                     <Text style={styles.eventDistance}>{event.distance}</Text>

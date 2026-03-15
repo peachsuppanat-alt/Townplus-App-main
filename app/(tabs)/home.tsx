@@ -2,7 +2,7 @@ import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as Location from 'expo-location';
 import { useFocusEffect, useRouter } from 'expo-router';
-import React, { useCallback, useEffect, useState } from 'react';
+import React, { useCallback, useState } from 'react';
 import { ActivityIndicator, Alert, Dimensions, Image, Platform, SafeAreaView, ScrollView, StatusBar, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 
 const { width } = Dimensions.get('window');
@@ -33,43 +33,66 @@ export default function HomeScreen() {
     }
   };
 
-  const fetchHomeData = async () => {
+  // 🌟 ฟังก์ชันดึงข้อมูลหน้า Home พร้อม "ดึงคะแนนดาวเฉลี่ย" จาก Database
+  const fetchHomeData = async (showLoading: boolean) => {
+    if (showLoading) setIsLoading(true);
     try {
-      setTimeout(() => {
-        setCategories([
-          { id: '1', name: 'อาหาร', icon: 'silverware-fork-knife', bgColor: '#FFE4E6' },
-          { id: '2', name: 'งานวัด', icon: 'ferris-wheel', bgColor: '#FEF3C7' }, 
-          { id: '3', name: 'ช้อปปิ้ง', icon: 'shopping-outline', bgColor: '#F3E8FF' },
-          { id: '4', name: 'ดนตรี', icon: 'music-note', bgColor: '#E0E7FF' },
-          { id: '5', name: 'กีฬา', icon: 'run', bgColor: '#D1FAE5' },
-          { id: '6', name: 'ศิลปะ', icon: 'palette', bgColor: '#E0F2FE' },
-          { id: '7', name: 'เวิร์กชอป', icon: 'book-open-variant', bgColor: '#FCE7F3' },
-          { id: '8', name: 'อาสา', icon: 'handshake-outline', bgColor: '#DCFCE7' },
-        ]);
-        // 🌟 แก้ตรงนี้: เปลี่ยนไอดีเป็น 1 และ 2 เพื่อให้ตรงกับ Mock Data ของหน้า Detail
-        setRecommendedEvents([
-          { id: '1', title: 'งานวัดภูเขาทอง 2569', date: '15 - 20 ก.พ.', distance: '0.5 กม.', rating: '4.8', image: 'https://cms.dmpcdn.com/travel/2024/10/22/bf86a330-9050-11ef-9ac9-8bc58bd3f671_webp_original.webp', isVerified: true },
-          { id: '2', title: 'ตลาดนัดคลองถม (Night Market)', date: 'ทุกวันศุกร์ - อาทิตย์', distance: '1.2 กม.', rating: '4.5', image: 'https://shopee.co.th/blog/wp-content/uploads/2023/08/Shopee-Blog-%E0%B8%95%E0%B8%A5%E0%B8%B2%E0%B8%94%E0%B8%82%E0%B8%AD%E0%B8%87%E0%B8%A1%E0%B8%B7%E0%B8%AD%E0%B8%AA%E0%B8%AD%E0%B8%87-%E0%B8%95%E0%B8%A5%E0%B8%B2%E0%B8%94%E0%B8%82%E0%B8%AD%E0%B8%87%E0%B9%80%E0%B8%81%E0%B9%88%E0%B8%B2-%E0%B8%95%E0%B8%A5%E0%B8%B2%E0%B8%94%E0%B8%99%E0%B8%B1%E0%B8%94.jpg', isVerified: true },
-        ]);
-        setCurrentLocationName('กรุงเทพมหานคร');
-        
-        setIsLoading(false); 
-      }, 800); 
+      // 1. แอบดึงคะแนนดาวเฉลี่ยจาก Backend เพื่อให้การ์ดอัปเดตล่าสุดเสมอ
+      let ratingsMap: any = {};
+      try {
+        const res = await fetch('http://192.168.174.35:3000/all-ratings');
+        const data = await res.json();
+        if (data.status === 'success') {
+          data.data.forEach((r: any) => {
+            ratingsMap[r.event_id.toString()] = r.avg_rating;
+          });
+        }
+      } catch (e) {
+        console.error('ไม่สามารถดึงคะแนนดาวหน้า Home ได้', e);
+      }
+
+      // 2. อัปเดตข้อมูลหมวดหมู่และกิจกรรมแนะนำ พร้อมใส่ดาวจริงจาก Database
+      setCategories([
+        { id: '1', name: 'อาหาร', icon: 'silverware-fork-knife', bgColor: '#FFE4E6' },
+        { id: '2', name: 'งานวัด', icon: 'ferris-wheel', bgColor: '#FEF3C7' }, 
+        { id: '3', name: 'ช้อปปิ้ง', icon: 'shopping-outline', bgColor: '#F3E8FF' },
+        { id: '4', name: 'ดนตรี', icon: 'music-note', bgColor: '#E0E7FF' },
+        { id: '5', name: 'กีฬา', icon: 'run', bgColor: '#D1FAE5' },
+        { id: '6', name: 'ศิลปะ', icon: 'palette', bgColor: '#E0F2FE' },
+        { id: '7', name: 'เวิร์กชอป', icon: 'book-open-variant', bgColor: '#FCE7F3' },
+        { id: '8', name: 'อาสา', icon: 'handshake-outline', bgColor: '#DCFCE7' },
+      ]);
+      
+      setRecommendedEvents([
+        { 
+          id: '1', title: 'งานวัดภูเขาทอง 2569', date: '15 - 20 ก.พ.', distance: '0.5 กม.', 
+          rating: ratingsMap['1'] || '0.0', // 🌟 ดึงดาวของ id 1
+          image: 'https://cms.dmpcdn.com/travel/2024/10/22/bf86a330-9050-11ef-9ac9-8bc58bd3f671_webp_original.webp', 
+          isVerified: true 
+        },
+        { 
+          id: '2', title: 'ตลาดนัดคลองถม (Night Market)', date: 'ทุกวันศุกร์ - อาทิตย์', distance: '1.2 กม.', 
+          rating: ratingsMap['2'] || '0.0', // 🌟 ดึงดาวของ id 2
+          image: 'https://shopee.co.th/blog/wp-content/uploads/2023/08/Shopee-Blog-%E0%B8%95%E0%B8%A5%E0%B8%B2%E0%B8%94%E0%B8%82%E0%B8%AD%E0%B8%87%E0%B8%A1%E0%B8%B7%E0%B8%AD%E0%B8%AA%E0%B8%AD%E0%B8%87-%E0%B8%95%E0%B8%A5%E0%B8%B2%E0%B8%94%E0%B8%82%E0%B8%AD%E0%B8%87%E0%B9%80%E0%B8%81%E0%B9%88%E0%B8%B2-%E0%B8%95%E0%B8%A5%E0%B8%B2%E0%B8%94%E0%B8%99%E0%B8%B1%E0%B8%94.jpg', 
+          isVerified: true 
+        },
+      ]);
+      setCurrentLocationName('กรุงเทพมหานคร');
     } catch (error) {
       console.error(error);
+    } finally {
       setIsLoading(false);
     }
   };
 
+  // 🌟 รวมไว้ใน useFocusEffect ที่เดียวเลย จะได้ดึงดาวใหม่ทุกครั้งที่กลับมาหน้าโฮม (โดยไม่ให้วงกลมหมุนโหลดมากวนใจ)
   useFocusEffect(
     useCallback(() => {
       loadUserData();
-    }, [])
+      // ถ้าเปิดแอปครั้งแรก (categories ยังว่าง) ให้โชว์หน้าโหลดหมุนติ้วๆ แต่ถ้าเคยโหลดแล้วให้แอบอัปเดตดาวแบบเงียบๆ
+      fetchHomeData(categories.length === 0); 
+    }, [categories.length])
   );
-
-  useEffect(() => { 
-    fetchHomeData(); 
-  }, []);
 
   const handleNearMeClick = async () => {
     try {
@@ -132,7 +155,6 @@ export default function HomeScreen() {
 
       <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.scrollContent}>
         
-        {/* 🌟 แก้ตรงนี้: เปลี่ยนให้กดแล้วส่งเลข 3 ไป แทนที่จะส่ง EVT_HOT_01 */}
         <TouchableOpacity style={styles.bannerContainer} activeOpacity={0.9} onPress={() => goToEventDetail('3')}>
           <Image source={{ uri: 'https://images.unsplash.com/photo-1492684223066-81342ee5ff30?q=80&w=800&auto=format&fit=crop' }} style={styles.bannerImage} />
           <View style={styles.bannerOverlay}>
@@ -179,6 +201,7 @@ export default function HomeScreen() {
                 <Image source={{ uri: event.image }} style={styles.eventImage} />
                 <View style={styles.ratingBadge}>
                   <Ionicons name="star" size={12} color="#FBBF24" />
+                  {/* 🌟 แสดงดาวของ Database แทน Mockup แล้ว */}
                   <Text style={styles.ratingText}>{event.rating}</Text>
                 </View>
               </View>

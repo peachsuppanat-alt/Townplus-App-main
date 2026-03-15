@@ -1,7 +1,7 @@
 import { Ionicons } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { useRouter } from 'expo-router';
-import React, { useEffect, useState } from 'react';
+import { useFocusEffect, useRouter } from 'expo-router';
+import React, { useCallback, useState } from 'react';
 import { ActivityIndicator, Modal, Platform, SafeAreaView, ScrollView, StatusBar, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 
 export default function ProfileScreen() {
@@ -10,41 +10,59 @@ export default function ProfileScreen() {
   const [userData, setUserData] = useState<any>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isLogoutModalVisible, setLogoutModalVisible] = useState(false);
+  
+  // 🌟 เพิ่ม State สำหรับเก็บจำนวนรีวิว
+  const [totalReviews, setTotalReviews] = useState(0);
 
-  useEffect(() => {
-    const fetchUserData = async () => {
-      try {
-        const storedUser = await AsyncStorage.getItem('user_data');
-        
-        if (storedUser) {
-          const parsedUser = JSON.parse(storedUser);
-          setUserData({
-            name: parsedUser.username || 'ผู้ใช้งาน', // เปลี่ยนเป็น username เหมือนตอนแก้หน้า Home
-            email: parsedUser.email || 'ไม่มีอีเมล',
-            reviewsCount: 0, 
-            pendingEvents: 0, 
-            avatarChar: parsedUser.username ? parsedUser.username.charAt(0).toUpperCase() : 'U'
-          });
-        } else {
-          setUserData({
-            name: 'ผู้มาเยือน',
-            email: 'guest@townpulse.com',
-            reviewsCount: 0,
-            pendingEvents: 0,
-            avatarChar: 'G'
-          });
+  // 🌟 ใช้ useFocusEffect เพื่อให้มันอัปเดตใหม่ทุกครั้งที่กดเข้าหน้านี้
+  useFocusEffect(
+    useCallback(() => {
+      const fetchUserData = async () => {
+        setIsLoading(true);
+        try {
+          const storedUser = await AsyncStorage.getItem('user_data');
+          
+          if (storedUser) {
+            const parsedUser = JSON.parse(storedUser);
+            setUserData({
+              id: parsedUser.id,
+              name: parsedUser.username || 'ผู้ใช้งาน', 
+              email: parsedUser.email || 'ไม่มีอีเมล',
+              pendingEvents: 0, 
+              avatarChar: parsedUser.username ? parsedUser.username.charAt(0).toUpperCase() : 'U'
+            });
+
+            // 🌟 ดึงจำนวนรีวิวทั้งหมดจาก Backend มาโชว์
+            try {
+              const res = await fetch(`http://192.168.174.35:3000/user-reviews/${parsedUser.id}`);
+              const data = await res.json();
+              if (data.status === 'success') {
+                setTotalReviews(data.totalCount);
+              }
+            } catch (e) {
+              console.error('ไม่สามารถดึงจำนวนรีวิวได้', e);
+            }
+
+          } else {
+            setUserData({
+              name: 'ผู้มาเยือน',
+              email: 'guest@townpulse.com',
+              pendingEvents: 0,
+              avatarChar: 'G'
+            });
+            setTotalReviews(0);
+          }
+        } catch (error) {
+          console.error('Failed to load user data', error);
+        } finally {
+          setIsLoading(false);
         }
-      } catch (error) {
-        console.error('Failed to load user data', error);
-      } finally {
-        setIsLoading(false);
-      }
-    };
+      };
 
-    fetchUserData();
-  }, []);
+      fetchUserData();
+    }, [])
+  );
 
-  // 🌟 เปลี่ยนชื่อให้ตรงกับปุ่ม
   const confirmLogout = async () => {
     try {
       await AsyncStorage.removeItem('user_data');
@@ -88,7 +106,8 @@ export default function ProfileScreen() {
           
           <View style={styles.statsBox}>
             <View style={styles.statItem}>
-              <Text style={styles.statValue}>{userData.reviewsCount}</Text>
+              {/* 🌟 แสดงจำนวนรีวิวจริงที่ดึงมาได้ */}
+              <Text style={styles.statValue}>{totalReviews}</Text>
               <Text style={styles.statLabel}>รีวิวทั้งหมด</Text>
             </View>
             <View style={styles.statDivider} />
@@ -99,36 +118,28 @@ export default function ProfileScreen() {
           </View>
         </View>
 
-        {/* 🌟 จัดเรียงวงเล็บเปิดปิดใหม่ให้ถูกต้อง */}
         <View style={styles.menuSection}>
           <Text style={styles.sectionTitle}>บัญชีและการตั้งค่า</Text>
           <View style={styles.menuCard}>
             <MenuItem icon="person-outline" title="แก้ไขโปรไฟล์" onPress={() => {}} />
-            <MenuItem icon="star-outline" title="ประวัติการรีวิวของฉัน" onPress={() => {}} />
+            {/* 🌟 กดปุ่มนี้แล้วให้ลิงก์ไปหน้าจอ MyReviews */}
+            <MenuItem icon="star-outline" title="ประวัติการรีวิวของฉัน" onPress={() => router.push('/my-reviews')} />
             <MenuItem icon="notifications-outline" title="การแจ้งเตือน" onPress={() => router.push('/notifications')} />
           </View>
 
           <Text style={styles.sectionTitle}>อื่นๆ</Text>
           <View style={styles.menuCard}>
             <MenuItem icon="help-circle-outline" title="ศูนย์ช่วยเหลือ" onPress={() => {}} />
-            {/* ปุ่มกดเปิด Modal Logout */}
             <MenuItem icon="log-out-outline" title="ออกจากระบบ" color="#EF4444" onPress={() => setLogoutModalVisible(true)} />
           </View>
         </View>
       </ScrollView>
 
-      {/* Modal ออกจากระบบ */}
-      <Modal
-        animationType="fade"
-        transparent={true}
-        visible={isLogoutModalVisible}
-        onRequestClose={() => setLogoutModalVisible(false)}
-      >
+      {/* Modal ออกจากระบบ เหมือนเดิมเป๊ะ */}
+      <Modal animationType="fade" transparent={true} visible={isLogoutModalVisible} onRequestClose={() => setLogoutModalVisible(false)}>
         <View style={styles.modalOverlay}>
           <View style={styles.modalContainer}>
-            <View style={styles.modalIconBox}>
-              <Ionicons name="log-out-outline" size={36} color="#EF4444" />
-            </View>
+            <View style={styles.modalIconBox}><Ionicons name="log-out-outline" size={36} color="#EF4444" /></View>
             <Text style={styles.modalTitle}>ออกจากระบบ</Text>
             <Text style={styles.modalMessage}>คุณแน่ใจหรือไม่ว่าต้องการออกจากระบบบัญชีนี้?</Text>
             
@@ -136,7 +147,6 @@ export default function ProfileScreen() {
               <TouchableOpacity style={styles.modalCancelButton} onPress={() => setLogoutModalVisible(false)} activeOpacity={0.7}>
                 <Text style={styles.modalCancelText}>ยกเลิก</Text>
               </TouchableOpacity>
-              
               <TouchableOpacity style={styles.modalConfirmButton} onPress={confirmLogout} activeOpacity={0.7}>
                 <Text style={styles.modalConfirmText}>ออกจากระบบ</Text>
               </TouchableOpacity>
