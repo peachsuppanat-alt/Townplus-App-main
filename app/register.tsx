@@ -23,8 +23,7 @@ export default function RegisterScreen() {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ 
-          first_name: username, // เอาสิ่งที่พิมพ์ในช่อง Username มาใส่เป็นชื่อจริงไปก่อน
-          last_name: '',        // นามสกุลปล่อยว่างไว้
+          username: username, 
           email: email, 
           password: password 
         }),
@@ -34,16 +33,15 @@ export default function RegisterScreen() {
 
       // 3. เช็กคำตอบจากเซิร์ฟเวอร์
       if (data.status === 'success') {
-        // เซฟข้อมูลลงในเครื่อง
+        // 🌟 แก้ตรงนี้: ให้เซฟ data.user ที่ได้จาก Backend โดยตรงเลย (โครงสร้างจะได้ตรงกับตอน Login)
         try {
-          const userData = { name: username, email: email };
-          await AsyncStorage.setItem('user_data', JSON.stringify(userData));
+          await AsyncStorage.setItem('user_data', JSON.stringify(data.user));
         } catch (error) {
           console.error('Error saving user data', error);
         }
 
         // แจ้งเตือนสำเร็จ แล้วเด้งไปหน้า Home ทันที
-        Alert.alert('สำเร็จ! 🎉', 'ลงทะเบียนและบันทึกฐานข้อมูลเรียบร้อย', [
+        Alert.alert('สำเร็จ! 🎉', 'ลงทะเบียนและเข้าสู่ระบบเรียบร้อย', [
           { 
             text: 'เริ่มต้นใช้งาน', 
             onPress: () => router.replace('/(tabs)/home') 

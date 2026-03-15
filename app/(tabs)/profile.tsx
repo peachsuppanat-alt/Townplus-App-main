@@ -1,5 +1,5 @@
 import { Ionicons } from '@expo/vector-icons';
-import AsyncStorage from '@react-native-async-storage/async-storage'; // 🌟 1. นำเข้า AsyncStorage
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useRouter } from 'expo-router';
 import React, { useEffect, useState } from 'react';
 import { ActivityIndicator, Modal, Platform, SafeAreaView, ScrollView, StatusBar, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
@@ -11,7 +11,6 @@ export default function ProfileScreen() {
   const [isLoading, setIsLoading] = useState(true);
   const [isLogoutModalVisible, setLogoutModalVisible] = useState(false);
 
-  // 🌟 2. ฟังก์ชันดึงข้อมูลผู้ใช้ที่เซฟไว้ตอน Login
   useEffect(() => {
     const fetchUserData = async () => {
       try {
@@ -20,14 +19,13 @@ export default function ProfileScreen() {
         if (storedUser) {
           const parsedUser = JSON.parse(storedUser);
           setUserData({
-            name: parsedUser.name || 'ผู้ใช้งาน',
+            name: parsedUser.username || 'ผู้ใช้งาน', // เปลี่ยนเป็น username เหมือนตอนแก้หน้า Home
             email: parsedUser.email || 'ไม่มีอีเมล',
-            reviewsCount: 0, // Mock รอ Backend
-            pendingEvents: 0, // Mock รอ Backend
-            avatarChar: parsedUser.name ? parsedUser.name.charAt(0).toUpperCase() : 'U'
+            reviewsCount: 0, 
+            pendingEvents: 0, 
+            avatarChar: parsedUser.username ? parsedUser.username.charAt(0).toUpperCase() : 'U'
           });
         } else {
-          // ถ้าไม่มีข้อมูล (หลุดเข้ามาแบบไม่ได้ Login) ให้ใช้ค่า Default
           setUserData({
             name: 'ผู้มาเยือน',
             email: 'guest@townpulse.com',
@@ -46,20 +44,14 @@ export default function ProfileScreen() {
     fetchUserData();
   }, []);
 
-  // 🚪 ฟังก์ชันเมื่อกดยืนยัน "ออกจากระบบ"
+  // 🌟 เปลี่ยนชื่อให้ตรงกับปุ่ม
   const confirmLogout = async () => {
-    setLogoutModalVisible(false); 
-    
-    // 🌟 3. เคลียร์ข้อมูล Session / Token ออกจากเครื่อง
     try {
       await AsyncStorage.removeItem('user_data');
-    } catch (e) {
-      console.error('Failed to remove user data', e);
+      router.replace('/'); 
+    } catch (error) {
+      console.error('เกิดข้อผิดพลาดในการออกจากระบบ', error);
     }
-    
-    setTimeout(() => {
-      router.replace('/'); // เตะกลับไปหน้า Login 
-    }, 300); 
   };
 
   const MenuItem = ({ icon, title, color = '#0F172A', onPress }: any) => (
@@ -107,6 +99,7 @@ export default function ProfileScreen() {
           </View>
         </View>
 
+        {/* 🌟 จัดเรียงวงเล็บเปิดปิดใหม่ให้ถูกต้อง */}
         <View style={styles.menuSection}>
           <Text style={styles.sectionTitle}>บัญชีและการตั้งค่า</Text>
           <View style={styles.menuCard}>
@@ -118,6 +111,7 @@ export default function ProfileScreen() {
           <Text style={styles.sectionTitle}>อื่นๆ</Text>
           <View style={styles.menuCard}>
             <MenuItem icon="help-circle-outline" title="ศูนย์ช่วยเหลือ" onPress={() => {}} />
+            {/* ปุ่มกดเปิด Modal Logout */}
             <MenuItem icon="log-out-outline" title="ออกจากระบบ" color="#EF4444" onPress={() => setLogoutModalVisible(true)} />
           </View>
         </View>

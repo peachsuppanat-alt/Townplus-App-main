@@ -1,4 +1,5 @@
 import { Ionicons } from '@expo/vector-icons';
+import AsyncStorage from '@react-native-async-storage/async-storage'; // 🌟 1. นำเข้า AsyncStorage
 import { useRouter } from 'expo-router';
 import React, { useState } from 'react';
 import { Alert, KeyboardAvoidingView, Platform, SafeAreaView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
@@ -7,46 +8,51 @@ export default function LoginScreen() {
   const router = useRouter();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [isError, setIsError] = useState(false);
+  const [errorMessage, setErrorMessage] = useState('');
 
-  // -------------------------------------------------------------
-  // 🔌 ฟังก์ชันสำหรับให้เพื่อน Backend (วิน/พีช) เอาไปเชื่อมต่อ Database
-  // -------------------------------------------------------------
   const handleLogin = async () => {
+    setIsError(false);
+    setErrorMessage('');
+
     if (!email || !password) {
-      Alert.alert('แจ้งเตือน', 'กรุณากรอกอีเมลและรหัสผ่านให้ครบถ้วน');
+      setIsError(true);
+      setErrorMessage('กรุณากรอกข้อมูลให้ครบทุกช่อง');
       return;
     }
 
-   //ใส่ ip ให้เป็น wifi เดียวกันกับ server และมือถือ
     try {
       const response = await fetch('http://192.168.174.35:3000/login', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email: email, password: password })
+        body: JSON.stringify({ email, password }),
       });
-      const data = await response.json();
       
-      if(data.status === 'success') {
-         // เก็บข้อมูล User ลงเครื่อง (เช่น AsyncStorage)
-         router.replace('/(tabs)/home');
+      const data = await response.json();
+
+      if (data.status === 'success') {
+        // 🌟 2. เพิ่มโค้ดส่วนนี้: บันทึกข้อมูล user ลงในหน่วยความจำของเครื่อง
+        try {
+          await AsyncStorage.setItem('user_data', JSON.stringify(data.user)); 
+        } catch (e) {
+          console.error('ไม่สามารถบันทึกข้อมูลผู้ใช้ได้', e);
+        }
+        
+        router.replace('/(tabs)/home'); 
       } else {
-         Alert.alert('เข้าสู่ระบบล้มเหลว', data.message);
+        setIsError(true);
+        setErrorMessage(data.message); 
       }
     } catch (error) {
       console.error(error);
+      Alert.alert('การเชื่อมต่อล้มเหลว', 'ไม่สามารถเชื่อมต่อเซิร์ฟเวอร์ได้');
     }
- 
-
-    // 🌟 โค้ดจำลอง (Mock) ระหว่างรอเพื่อนทำ Backend: พอกด Login ให้วิ่งไปหน้า Home เลย
-    console.log('Logging in with:', email, password);
-    router.replace('/(tabs)/home'); // คำสั่งเปลี่ยนไปหน้า Home
   };
 
   return (
     <SafeAreaView style={styles.container}>
       <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} style={styles.content}>
         
-        {/* โลโก้และข้อความต้อนรับ */}
         <View style={styles.header}>
           <View style={styles.logoCircle}>
              <Ionicons name="location" size={40} color="#FF385C" />
@@ -55,9 +61,8 @@ export default function LoginScreen() {
           <Text style={styles.subtitle}>เข้าสู่ระบบเพื่อค้นหากิจกรรมรอบตัวคุณ</Text>
         </View>
 
-        {/* ฟอร์มกรอกข้อมูล */}
         <View style={styles.form}>
-          <View style={styles.inputContainer}>
+          <View style={[styles.inputContainer, isError && { borderColor: 'red', borderWidth: 1 }]}>
             <Ionicons name="mail-outline" size={20} color="#6B7280" style={styles.inputIcon} />
             <TextInput 
               style={styles.input} 
@@ -69,7 +74,7 @@ export default function LoginScreen() {
             />
           </View>
 
-          <View style={styles.inputContainer}>
+          <View style={[styles.inputContainer, isError && { borderColor: 'red', borderWidth: 1 }]}>
             <Ionicons name="lock-closed-outline" size={20} color="#6B7280" style={styles.inputIcon} />
             <TextInput 
               style={styles.input} 
@@ -84,13 +89,17 @@ export default function LoginScreen() {
             <Text style={styles.forgotPasswordText}>ลืมรหัสผ่าน?</Text>
           </TouchableOpacity>
 
-          {/* ปุ่ม Login */}
+          {errorMessage ? (
+            <Text style={{ color: 'red', fontFamily: 'Prompt_400Regular', fontSize: 14, textAlign: 'center', marginBottom: 10 }}>
+              {errorMessage}
+            </Text>
+          ) : null}
+
           <TouchableOpacity style={styles.loginButton} onPress={handleLogin} activeOpacity={0.8}>
             <Text style={styles.loginButtonText}>เข้าสู่ระบบ</Text>
           </TouchableOpacity>
         </View>
 
-        {/* ปุ่มไปหน้าสมัครสมาชิก */}
         <View style={styles.footer}>
           <Text style={styles.footerText}>ยังไม่มีบัญชีใช่ไหม? </Text>
           <TouchableOpacity onPress={() => router.push('/register')}>

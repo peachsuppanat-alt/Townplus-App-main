@@ -1,8 +1,8 @@
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
-import AsyncStorage from '@react-native-async-storage/async-storage'; // 🌟 1. นำเข้า AsyncStorage
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as Location from 'expo-location';
-import { useRouter } from 'expo-router';
-import React, { useEffect, useState } from 'react';
+import { useRouter, useFocusEffect } from 'expo-router';
+import React, { useEffect, useState, useCallback } from 'react';
 import { ActivityIndicator, Alert, Dimensions, Image, Platform, SafeAreaView, ScrollView, StatusBar, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 
 const { width } = Dimensions.get('window');
@@ -19,13 +19,14 @@ export default function HomeScreen() {
   
   const [userName, setUserName] = useState<string>('ผู้มาเยือน');
 
-  // 🌟 2. เพิ่มฟังก์ชันดึงข้อมูลผู้ใช้จากเครื่อง
+  // 🌟 ฟังก์ชันดึงข้อมูลผู้ใช้จากเครื่อง
   const loadUserData = async () => {
     try {
       const storedUser = await AsyncStorage.getItem('user_data');
       if (storedUser) {
         const parsedUser = JSON.parse(storedUser);
-        setUserName(parsedUser.name || 'ผู้มาเยือน');
+        // ✅ แก้ตรงนี้: เปลี่ยนจาก parsedUser.name เป็น parsedUser.username ให้ตรงกับ Database
+        setUserName(parsedUser.username || 'ผู้มาเยือน');
       } else {
         setUserName('ผู้มาเยือน');
       }
@@ -53,8 +54,6 @@ export default function HomeScreen() {
         ]);
         setCurrentLocationName('กรุงเทพมหานคร');
         
-        // 🌟 3. ลบคำว่า setUserName('สมชาย (ชื่อจำลอง)'); ตรงนี้ออก เพราะเราดึงจาก AsyncStorage แล้ว
-        
         setIsLoading(false); 
       }, 800); 
     } catch (error) {
@@ -63,8 +62,16 @@ export default function HomeScreen() {
     }
   };
 
+ // 🌟 ใช้ useFocusEffect เพื่อให้มันดึงชื่อใหม่ "ทุกครั้ง" ที่สลับแท็บมาหน้า Home
+  useFocusEffect(
+    useCallback(() => {
+      loadUserData();
+    }, [])
+  );
+
+  // ส่วนข้อมูลกิจกรรม (fetchHomeData) ปล่อยไว้ใน useEffect เหมือนเดิม 
+  // เพื่อให้มันโหลดแค่ครั้งแรกครั้งเดียว จะได้ไม่ต้องหมุนติ้วๆ ทุกครั้งที่สลับหน้าครับ
   useEffect(() => { 
-    loadUserData(); // 🌟 4. เรียกใช้ฟังก์ชันโหลดผู้ใช้ตอนเปิดหน้า
     fetchHomeData(); 
   }, []);
 
