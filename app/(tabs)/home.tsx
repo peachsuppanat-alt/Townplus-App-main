@@ -1,8 +1,8 @@
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as Location from 'expo-location';
-import { useRouter, useFocusEffect } from 'expo-router';
-import React, { useEffect, useState, useCallback } from 'react';
+import { useFocusEffect, useRouter } from 'expo-router';
+import React, { useCallback, useEffect, useState } from 'react';
 import { ActivityIndicator, Alert, Dimensions, Image, Platform, SafeAreaView, ScrollView, StatusBar, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 
 const { width } = Dimensions.get('window');
@@ -19,13 +19,11 @@ export default function HomeScreen() {
   
   const [userName, setUserName] = useState<string>('ผู้มาเยือน');
 
-  // 🌟 ฟังก์ชันดึงข้อมูลผู้ใช้จากเครื่อง
   const loadUserData = async () => {
     try {
       const storedUser = await AsyncStorage.getItem('user_data');
       if (storedUser) {
         const parsedUser = JSON.parse(storedUser);
-        // ✅ แก้ตรงนี้: เปลี่ยนจาก parsedUser.name เป็น parsedUser.username ให้ตรงกับ Database
         setUserName(parsedUser.username || 'ผู้มาเยือน');
       } else {
         setUserName('ผู้มาเยือน');
@@ -48,9 +46,10 @@ export default function HomeScreen() {
           { id: '7', name: 'เวิร์กชอป', icon: 'book-open-variant', bgColor: '#FCE7F3' },
           { id: '8', name: 'อาสา', icon: 'handshake-outline', bgColor: '#DCFCE7' },
         ]);
+        // 🌟 แก้ตรงนี้: เปลี่ยนไอดีเป็น 1 และ 2 เพื่อให้ตรงกับ Mock Data ของหน้า Detail
         setRecommendedEvents([
-          { id: 'EVT001', title: 'งานวัดภูเขาทอง 2569', date: '15 - 20 ก.พ.', distance: '0.5 กม.', rating: '4.8', image: 'https://cms.dmpcdn.com/travel/2024/10/22/bf86a330-9050-11ef-9ac9-8bc58bd3f671_webp_original.webp', isVerified: true },
-          { id: 'EVT002', title: 'ตลาดนัดคลองถม (Night Market)', date: 'ทุกวันศุกร์ - อาทิตย์', distance: '1.2 กม.', rating: '4.5', image: 'https://shopee.co.th/blog/wp-content/uploads/2023/08/Shopee-Blog-%E0%B8%95%E0%B8%A5%E0%B8%B2%E0%B8%94%E0%B8%82%E0%B8%AD%E0%B8%87%E0%B8%A1%E0%B8%B7%E0%B8%AD%E0%B8%AA%E0%B8%AD%E0%B8%87-%E0%B8%95%E0%B8%A5%E0%B8%B2%E0%B8%94%E0%B8%82%E0%B8%AD%E0%B8%87%E0%B9%80%E0%B8%81%E0%B9%88%E0%B8%B2-%E0%B8%95%E0%B8%A5%E0%B8%B2%E0%B8%94%E0%B8%99%E0%B8%B1%E0%B8%94.jpg', isVerified: true },
+          { id: '1', title: 'งานวัดภูเขาทอง 2569', date: '15 - 20 ก.พ.', distance: '0.5 กม.', rating: '4.8', image: 'https://cms.dmpcdn.com/travel/2024/10/22/bf86a330-9050-11ef-9ac9-8bc58bd3f671_webp_original.webp', isVerified: true },
+          { id: '2', title: 'ตลาดนัดคลองถม (Night Market)', date: 'ทุกวันศุกร์ - อาทิตย์', distance: '1.2 กม.', rating: '4.5', image: 'https://shopee.co.th/blog/wp-content/uploads/2023/08/Shopee-Blog-%E0%B8%95%E0%B8%A5%E0%B8%B2%E0%B8%94%E0%B8%82%E0%B8%AD%E0%B8%87%E0%B8%A1%E0%B8%B7%E0%B8%AD%E0%B8%AA%E0%B8%AD%E0%B8%87-%E0%B8%95%E0%B8%A5%E0%B8%B2%E0%B8%94%E0%B8%82%E0%B8%AD%E0%B8%87%E0%B9%80%E0%B8%81%E0%B9%88%E0%B8%B2-%E0%B8%95%E0%B8%A5%E0%B8%B2%E0%B8%94%E0%B8%99%E0%B8%B1%E0%B8%94.jpg', isVerified: true },
         ]);
         setCurrentLocationName('กรุงเทพมหานคร');
         
@@ -62,15 +61,12 @@ export default function HomeScreen() {
     }
   };
 
- // 🌟 ใช้ useFocusEffect เพื่อให้มันดึงชื่อใหม่ "ทุกครั้ง" ที่สลับแท็บมาหน้า Home
   useFocusEffect(
     useCallback(() => {
       loadUserData();
     }, [])
   );
 
-  // ส่วนข้อมูลกิจกรรม (fetchHomeData) ปล่อยไว้ใน useEffect เหมือนเดิม 
-  // เพื่อให้มันโหลดแค่ครั้งแรกครั้งเดียว จะได้ไม่ต้องหมุนติ้วๆ ทุกครั้งที่สลับหน้าครับ
   useEffect(() => { 
     fetchHomeData(); 
   }, []);
@@ -113,7 +109,6 @@ export default function HomeScreen() {
       <View style={styles.headerContainer}>
         <TouchableOpacity style={styles.locationWrapper}>
           <View style={styles.greetingRow}>
-            {/* 🌟 แสดงชื่อตามที่ดึงมาได้ */}
             <Text style={styles.greetingText}>สวัสดี, {userName}</Text>
             <MaterialCommunityIcons name="hand-wave" size={14} color="#F59E0B" style={{ marginLeft: 6 }} />
           </View>
@@ -137,7 +132,8 @@ export default function HomeScreen() {
 
       <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.scrollContent}>
         
-        <TouchableOpacity style={styles.bannerContainer} activeOpacity={0.9} onPress={() => goToEventDetail('EVT_HOT_01')}>
+        {/* 🌟 แก้ตรงนี้: เปลี่ยนให้กดแล้วส่งเลข 3 ไป แทนที่จะส่ง EVT_HOT_01 */}
+        <TouchableOpacity style={styles.bannerContainer} activeOpacity={0.9} onPress={() => goToEventDetail('3')}>
           <Image source={{ uri: 'https://images.unsplash.com/photo-1492684223066-81342ee5ff30?q=80&w=800&auto=format&fit=crop' }} style={styles.bannerImage} />
           <View style={styles.bannerOverlay}>
             <View style={styles.bannerBadge}>

@@ -1,13 +1,15 @@
 import { Ionicons } from '@expo/vector-icons';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import React, { useEffect, useState } from 'react';
 import { ActivityIndicator, Alert, Dimensions, Image, Linking, Platform, ScrollView, StatusBar, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 
 const { width } = Dimensions.get('window');
 
-// 🌟 ข้อมูลจำลองสำหรับหน้ารายละเอียด ครบถ้วนตาม Explore
+// 🌟 เปลี่ยนคีย์ด้านหน้าเป็นตัวเลข 1-12 เพื่อให้ตรงกับ Database
 const MOCK_EVENTS: any = {
-  'EVT001': {
+  '1': {
+    dbId: 1, 
     title: 'งานวัดภูเขาทอง 2569', date: '15 - 20 ก.พ. 2569 • 16:00 - 23:00 น.', location: 'วัดสระเกศราชวรมหาวิหาร', distance: '0.5 กม.',
     price: 'เข้าฟรี', rating: '4.8', reviewsCount: '1.2k',
     description: 'กลับมาอีกครั้งกับงานวัดที่ยิ่งใหญ่ที่สุดในกรุงเทพฯ สัมผัสบรรยากาศงานวัดย้อนยุค ของกินอร่อยๆ เพียบ ชิงช้าสวรรค์ ม้าหมุน พร้อมชมวิวกรุงเทพฯ แบบ 360 องศา',
@@ -16,7 +18,8 @@ const MOCK_EVENTS: any = {
     adminPicks: [{ id: '1', title: 'ผัดไทยเจ๊ต้อย', desc: 'ผัดไทยเตาถ่านคิวยาว ห้ามพลาด!', image: 'https://images.unsplash.com/photo-1559314809-0d155014e29e?q=80&w=400' }],
     reviews: [{ id: 'r1', user: 'Somchai', rating: 5, comment: 'งานใหญ่มาก ของกินเยอะสุดๆ แนะนำให้ไปช่วงเย็นๆ จะได้ไม่ร้อนครับ', date: '1 วันที่แล้ว' }]
   },
-  'EVT002': {
+  '2': {
+    dbId: 2, 
     title: 'ตลาดนัดคลองถม (Night Market)', date: 'ทุกวันศุกร์ - อาทิตย์ • 18:00 - 01:00 น.', location: 'ย่านคลองถม กรุงเทพฯ', distance: '1.2 กม.',
     price: 'เข้าฟรี', rating: '4.5', reviewsCount: '856',
     description: 'สวรรค์ของนักช้อปปิ้งของมือสอง ของสะสม อะไหล่รถยนต์ และของวินเทจหายาก เดินชิลๆ ยามค่ำคืนพร้อมสตรีทฟู้ดอร่อยๆ ตลอดทาง',
@@ -24,7 +27,8 @@ const MOCK_EVENTS: any = {
     tags: ['ช้อปปิ้ง', 'ของมือสอง', 'สตรีทฟู้ด'], lat: 13.7465, lng: 100.5061,
     adminPicks: [], reviews: []
   },
-  'EVT_HOT_01': {
+  '3': {
+    dbId: 3, 
     title: 'เทศกาลดนตรีกลางคืน (Night Vibe Fest)', date: '28 ก.พ. 2569 • 18:00 - 24:00 น.', location: 'ลานคนเมือง', distance: '3.5 กม.',
     price: '599.-', rating: '4.9', reviewsCount: '3.4k',
     description: 'ปลดปล่อยความสนุกไปกับเสียงดนตรีจากศิลปินอินดี้ชั้นนำ พร้อมแสงสีเสียงจัดเต็ม',
@@ -32,7 +36,8 @@ const MOCK_EVENTS: any = {
     tags: ['คอนเสิร์ต', 'ดนตรีสด'], lat: 13.7525, lng: 100.5003,
     adminPicks: [], reviews: []
   },
-  'EVT_FOOD': {
+  '4': {
+    dbId: 4, 
     title: 'เทศกาลอาหารไทย', date: '10 มี.ค. 2569 • 10:00 - 21:00 น.', location: 'ศูนย์สิริกิติ์', distance: '2.0 กม.',
     price: 'เข้าฟรี', rating: '4.7', reviewsCount: '520',
     description: 'รวมร้านอาหารระดับมิชลินสตาร์และสตรีทฟู้ดชื่อดังจากทั่วประเทศไทยมาไว้ในที่เดียว พร้อมโปรโมชั่นพิเศษเพียบ',
@@ -41,7 +46,8 @@ const MOCK_EVENTS: any = {
     adminPicks: [{ id: '1', title: 'หมูกรอบเฮียจาง', desc: 'หมูกรอบชาชูทอดสดๆ กรอบยันเงา!', image: 'https://images.unsplash.com/photo-1627308595229-7830f5c9c66e?q=80&w=400' }],
     reviews: []
   },
-  'EVT_ART': {
+  '5': {
+    dbId: 5, 
     title: 'นิทรรศการศิลปะดิจิทัล', date: '1-30 พ.ค. 2569 • 10:00 - 19:00 น.', location: 'BACC หอศิลป์ฯ', distance: '4.5 กม.',
     price: '200.-', rating: '4.8', reviewsCount: '340',
     description: 'นิทรรศการศิลปะแบบ Immersive Art ที่จะพาคุณดำดิ่งไปในโลกแห่งแสงสีและจินตนาการ ถ่ายรูปสวยทุกมุม',
@@ -49,7 +55,8 @@ const MOCK_EVENTS: any = {
     tags: ['ศิลปะ', 'นิทรรศการ'], lat: 13.7466, lng: 100.5300,
     adminPicks: [], reviews: []
   },
-  'EVT_PET': {
+  '6': {
+    dbId: 6, 
     title: 'Pet Lover Fair 2026', date: '15-18 พ.ค. 2569 • 10:00 - 20:00 น.', location: 'อิมแพ็ค เมืองทองธานี', distance: '6.0 กม.',
     price: '100.-', rating: '4.9', reviewsCount: '2.1k',
     description: 'งานแฟร์สำหรับคนรักสัตว์เลี้ยง พบกับสินค้าลดราคา คลินิกตรวจสุขภาพฟรี และการประกวดความสามารถน้องหมาน้องแมว',
@@ -57,7 +64,8 @@ const MOCK_EVENTS: any = {
     tags: ['สัตว์เลี้ยง', 'ช้อปปิ้ง'], lat: 13.9113, lng: 100.5484,
     adminPicks: [], reviews: []
   },
-  'EVT_WS': {
+  '7': {
+    dbId: 7, 
     title: 'เวิร์กชอปปั้นเซรามิกมินิมอล', date: 'ทุกเสาร์-อาทิตย์ • 13:00 - 16:00 น.', location: 'สตูดิโอ อารีย์', distance: '2.8 กม.',
     price: '1,200.-', rating: '4.9', reviewsCount: '120',
     description: 'เรียนรู้พื้นฐานการปั้นเซรามิกด้วยมือแบบง่ายๆ ได้ผลงานกลับบ้าน 2 ชิ้น รวมอุปกรณ์และเครื่องดื่ม 1 แก้ว',
@@ -65,7 +73,8 @@ const MOCK_EVENTS: any = {
     tags: ['เวิร์กชอป', 'งานคราฟต์'], lat: 13.7797, lng: 100.5446,
     adminPicks: [], reviews: []
   },
-  'EVT_RUN': {
+  '8': {
+    dbId: 8, 
     title: 'วิ่งมาราธอน ซิตี้รัน', date: '12 เม.ย. 2569 • 04:00 - 10:00 น.', location: 'สวนลุมพินี', distance: '5.0 กม.',
     price: '850.-', rating: '4.6', reviewsCount: '980',
     description: 'งานวิ่งมาราธอนใจกลางเมืองหลวง สัมผัสอากาศยามเช้าและวิวตึกระฟ้า มีระยะทาง 5K, 10K และ 21K',
@@ -73,7 +82,8 @@ const MOCK_EVENTS: any = {
     tags: ['กีฬา', 'วิ่ง'], lat: 13.7314, lng: 100.5415,
     adminPicks: [], reviews: []
   },
-  'EVT_VOL': {
+  '9': {
+    dbId: 9, 
     title: 'อาสาปลูกป่าชายเลน บางปู', date: '20 ส.ค. 2569 • 08:00 - 12:00 น.', location: 'สถานตากอากาศบางปู', distance: '25 กม.',
     price: 'ฟรี (รับบริจาคตามศรัทธา)', rating: '4.8', reviewsCount: '150',
     description: 'ร่วมเป็นส่วนหนึ่งในการอนุรักษ์ธรรมชาติ ปลูกต้นโกงกางและทำความสะอาดป่าชายเลน พร้อมรับประกาศนียบัตร',
@@ -81,7 +91,8 @@ const MOCK_EVENTS: any = {
     tags: ['จิตอาสา', 'ธรรมชาติ'], lat: 13.5186, lng: 100.6542,
     adminPicks: [], reviews: []
   },
-  'EVT_CAMP': {
+  '10': {
+    dbId: 10, 
     title: 'แคมป์ปิ้งดูดาว เขาใหญ่', date: '5-7 ธ.ค. 2569', location: 'อุทยานแห่งชาติเขาใหญ่', distance: '120 กม.',
     price: '1,500.- (รวมเต็นท์)', rating: '4.7', reviewsCount: '410',
     description: 'ทริปแคมป์ปิ้งหน้าหนาว นอนดูดาวท่ามกลางธรรมชาติที่สมบูรณ์ที่สุด มีผู้เชี่ยวชาญบรรยายเรื่องกลุ่มดาว',
@@ -89,7 +100,8 @@ const MOCK_EVENTS: any = {
     tags: ['ท่องเที่ยว', 'แคมป์ปิ้ง'], lat: 14.4392, lng: 101.3723,
     adminPicks: [], reviews: []
   },
-  'EVT_SHOP2': {
+  '11': {
+    dbId: 11, 
     title: 'งานเซลล์แบรนด์เนมประจำปี', date: '1-5 ก.ค. 2569 • 10:00 - 22:00 น.', location: 'Siam Paragon', distance: '1.5 กม.',
     price: 'เข้าฟรี', rating: '4.6', reviewsCount: '800',
     description: 'ลดล้างสต๊อกสินค้าแบรนด์เนมระดับไฮเอนด์สูงสุด 80% ทั้งกระเป๋า รองเท้า และเสื้อผ้า',
@@ -97,7 +109,8 @@ const MOCK_EVENTS: any = {
     tags: ['ช้อปปิ้ง', 'แบรนด์เนม'], lat: 13.7468, lng: 100.5346,
     adminPicks: [], reviews: []
   },
-  'EVT_MUSIC2': {
+  '12': {
+    dbId: 12, 
     title: 'คอนเสิร์ตอินดี้ในสวน', date: '5 เม.ย. 2569 • 16:00 - 22:00 น.', location: 'สวนเบญจกิติ', distance: '2.5 กม.',
     price: '300.-', rating: '4.8', reviewsCount: '620',
     description: 'ฟังเพลงอินดี้ฟังสบายท่ามกลางธรรมชาติในสวนสาธารณะใจกลางเมือง พกเสื่อมาปิกนิกได้เลย',
@@ -114,22 +127,77 @@ export default function EventDetailScreen() {
   const [eventData, setEventData] = useState<any>(null);
   const [isFavorite, setIsFavorite] = useState(false);
   const [isLoggedIn, setIsLoggedIn] = useState(false); 
+  const [userData, setUserData] = useState<any>(null);
   const [reviewText, setReviewText] = useState('');
   const [userRating, setUserRating] = useState(0); 
 
   useEffect(() => {
-    // ป้องกันแอปพัง ถ้ารหัส id ยังส่งมาไม่ถึง
-    const dataId = id ? (id as string) : 'EVT001';
-    
-    // ค้นหาข้อมูล ถ้าไม่เจอให้แสดง fallback ป้องกันแอป error
-    const data = MOCK_EVENTS[dataId] || {
-        title: 'กิจกรรมนี้ถูกลบแล้ว', date: '-', location: '-', distance: '-', price: '-', rating: '0', reviewsCount: '0',
-        description: 'ไม่พบรายละเอียดของกิจกรรมนี้', image: 'https://images.unsplash.com/photo-1511632765486-a01980e01a18?q=80&w=800',
-        tags: [], adminPicks: [], reviews: []
+    const fetchEventAndCheckFavorite = async () => {
+      // 1. ดึงข้อมูล User จากเครื่อง
+      const storedUser = await AsyncStorage.getItem('user_data');
+      let currentUser = null;
+
+      if (storedUser) {
+        setIsLoggedIn(true);
+        currentUser = JSON.parse(storedUser);
+        setUserData(currentUser);
+      }
+
+      // 2. ดึงข้อมูลกิจกรรมมาแสดง
+      const dataId = id ? (id as string) : '1';
+      const data = MOCK_EVENTS[dataId] || {
+          title: 'กิจกรรมนี้ถูกลบแล้ว', date: '-', location: '-', distance: '-', price: '-', rating: '0', reviewsCount: '0',
+          description: 'ไม่พบรายละเอียดของกิจกรรมนี้', image: 'https://images.unsplash.com/photo-1511632765486-a01980e01a18?q=80&w=800',
+          tags: [], adminPicks: [], reviews: []
+      };
+      setEventData(data);
+
+      // 🌟 3. เช็กว่า User เคยกดหัวใจให้งานนี้หรือยัง
+      if (currentUser && data.dbId) {
+        try {
+          const response = await fetch(`http://192.168.174.35:3000/saved-events/${currentUser.id}`);
+          const result = await response.json();
+          if (result.status === 'success') {
+            const isSaved = result.data.some((savedEvent: any) => savedEvent.id === data.dbId);
+            setIsFavorite(isSaved);
+          }
+        } catch (error) {
+          console.error('Error fetching favorite status', error);
+        }
+      }
     };
-    
-    setEventData(data);
+
+    fetchEventAndCheckFavorite();
   }, [id]);
+
+  // 🌟 ฟังก์ชันจัดการกดหัวใจ (สลับสีทันที ไร้ Popup)
+  const handleToggleFavorite = async () => {
+    if (!isLoggedIn || !userData) {
+      Alert.alert('ต้องเข้าสู่ระบบ', 'คุณต้องเข้าสู่ระบบก่อน จึงจะสามารถบันทึกกิจกรรมได้', [
+        { text: 'ยกเลิก', style: 'cancel' },
+        { text: 'ไปหน้า Login', onPress: () => router.push('/') }
+      ]);
+      return;
+    }
+
+    if (!eventData?.dbId) return;
+
+    // เปลี่ยนสีหัวใจทันที (Optimistic UI)
+    setIsFavorite(!isFavorite);
+
+    try {
+      // ส่งข้อมูลเงียบๆ ไม่ต้อง Alert
+      await fetch('http://192.168.174.35:3000/toggle-save', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ user_id: userData.id, event_id: eventData.dbId }) 
+      });
+    } catch (error) {
+      console.error(error);
+      // ถ้า Error หรือส่งไม่สำเร็จ ค่อยสลับสีคืน
+      setIsFavorite(isFavorite); 
+    }
+  };
 
   const handleNavigate = () => {
     if (!eventData?.lat || !eventData?.lng) {
@@ -197,7 +265,7 @@ export default function EventDetailScreen() {
             <TouchableOpacity style={styles.iconCircle} onPress={() => router.back()}>
               <Ionicons name="arrow-back" size={24} color="#0F172A" />
             </TouchableOpacity>
-            <TouchableOpacity style={styles.iconCircle} onPress={() => setIsFavorite(!isFavorite)}>
+            <TouchableOpacity style={styles.iconCircle} onPress={handleToggleFavorite}>
               <Ionicons name={isFavorite ? "heart" : "heart-outline"} size={24} color={isFavorite ? "#FF385C" : "#0F172A"} />
             </TouchableOpacity>
           </View>

@@ -3,25 +3,22 @@ import { useLocalSearchParams, useRouter } from 'expo-router';
 import React, { useEffect, useState } from 'react';
 import { ActivityIndicator, Image, Platform, SafeAreaView, ScrollView, StatusBar, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 
-// 🌟 เพิ่มข้อมูลแบบจัดเต็ม ครอบคลุมหลายหมวดหมู่
+// 🌟 เปลี่ยน id ให้เป็นตัวเลข 1-12 เพื่อให้ลิงก์ไปหน้า Detail แล้วหาเจอครับ
 const MOCK_EVENTS = [
-  { id: 'EVT001', title: 'งานวัดภูเขาทอง 2569', category: 'เทศกาลและงานวัด', date: '15 - 20 ก.พ.', distance: '0.5 กม.', image: 'https://cms.dmpcdn.com/travel/2024/10/22/bf86a330-9050-11ef-9ac9-8bc58bd3f671_webp_original.webp' },
-  { id: 'EVT002', title: 'ตลาดนัดคลองถม', category: 'ตลาดและช้อปปิ้ง', date: 'ทุกวันศุกร์ - อาทิตย์', distance: '1.2 กม.', image: 'https://shopee.co.th/blog/wp-content/uploads/2023/08/Shopee-Blog-%E0%B8%95%E0%B8%A5%E0%B8%B2%E0%B8%94%E0%B8%82%E0%B8%AD%E0%B8%87%E0%B8%A1%E0%B8%B7%E0%B8%AD%E0%B8%AA%E0%B8%AD%E0%B8%87-%E0%B8%95%E0%B8%A5%E0%B8%B2%E0%B8%94%E0%B8%82%E0%B8%AD%E0%B8%87%E0%B9%80%E0%B8%81%E0%B9%88%E0%B8%B2-%E0%B8%95%E0%B8%A5%E0%B8%B2%E0%B8%94%E0%B8%99%E0%B8%B1%E0%B8%94.jpg' },
-  { id: 'EVT_HOT_01', title: 'เทศกาลดนตรีกลางคืน', category: 'ดนตรีและคอนเสิร์ต', date: '28 ก.พ. 2569', distance: '3.5 กม.', image: 'https://images.unsplash.com/photo-1492684223066-81342ee5ff30?q=80&w=500' },
-  { id: 'EVT_FOOD', title: 'เทศกาลอาหารไทย', category: 'อาหารและเครื่องดื่ม', date: '10 มี.ค. 2569', distance: '2.0 กม.', image: 'https://images.unsplash.com/photo-1504674900247-0877df9cc836?q=80&w=500' },
-  
-  // 🌟 ข้อมูลใหม่
-  { id: 'EVT_ART', title: 'นิทรรศการศิลปะดิจิทัล', category: 'ศิลปะและนิทรรศการ', date: '1-30 พ.ค. 2569', distance: '4.5 กม.', image: 'https://images.unsplash.com/photo-1547891654-e66ed7ebb968?q=80&w=500' },
-  { id: 'EVT_PET', title: 'Pet Lover Fair 2026', category: 'สัตว์เลี้ยง', date: '15-18 พ.ค. 2569', distance: '6.0 กม.', image: 'https://images.unsplash.com/photo-1450778869180-41d0601e046e?q=80&w=500' },
-  { id: 'EVT_WS', title: 'เวิร์กชอปปั้นเซรามิกมินิมอล', category: 'เวิร์กชอปและสัมมนา', date: 'ทุกเสาร์-อาทิตย์', distance: '2.8 กม.', image: 'https://images.unsplash.com/photo-1610701596007-11502861dcfa?q=80&w=500' },
-  { id: 'EVT_RUN', title: 'วิ่งมาราธอน ซิตี้รัน', category: 'กีฬาและเอาท์ดอร์', date: '12 เม.ย. 2569', distance: '5.0 กม.', image: 'https://plus.unsplash.com/premium_photo-1663134254080-a3e9f79ae748?q=80&w=1708&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D' },
-  { id: 'EVT_VOL', title: 'อาสาปลูกป่าชายเลน บางปู', category: 'ชุมชนและจิตอาสา', date: '20 ส.ค. 2569', distance: '25 กม.', image: 'https://images.unsplash.com/photo-1622383563227-04401ab4e5ea?q=80&w=774&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D' },
-  { id: 'EVT_CAMP', title: 'แคมป์ปิ้งดูดาว เขาใหญ่', category: 'ท่องเที่ยวธรรมชาติ', date: '5-7 ธ.ค. 2569', distance: '120 กม.', image: 'https://images.unsplash.com/flagged/photo-1562307294-4060df701fa3?q=80&w=1016&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D' },
-  { id: 'EVT_SHOP2', title: 'งานเซลล์แบรนด์เนมประจำปี', category: 'ตลาดและช้อปปิ้ง', date: '1-5 ก.ค. 2569', distance: '1.5 กม.', image: 'https://images.unsplash.com/photo-1768775036854-75341e3a022b?q=80&w=1768&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D' },
-  { id: 'EVT_MUSIC2', title: 'คอนเสิร์ตอินดี้ในสวน', category: 'ดนตรีและคอนเสิร์ต', date: '5 เม.ย. 2569', distance: '2.5 กม.', image: 'https://images.unsplash.com/photo-1749544292533-65b0ec299191?q=80&w=1750&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D' }
+  { id: '1', title: 'งานวัดภูเขาทอง 2569', category: 'เทศกาลและงานวัด', date: '15 - 20 ก.พ.', distance: '0.5 กม.', image: 'https://cms.dmpcdn.com/travel/2024/10/22/bf86a330-9050-11ef-9ac9-8bc58bd3f671_webp_original.webp' },
+  { id: '2', title: 'ตลาดนัดคลองถม', category: 'ตลาดและช้อปปิ้ง', date: 'ทุกวันศุกร์ - อาทิตย์', distance: '1.2 กม.', image: 'https://shopee.co.th/blog/wp-content/uploads/2023/08/Shopee-Blog-%E0%B8%95%E0%B8%A5%E0%B8%B2%E0%B8%94%E0%B8%82%E0%B8%AD%E0%B8%87%E0%B8%A1%E0%B8%B7%E0%B8%AD%E0%B8%AA%E0%B8%AD%E0%B8%87-%E0%B8%95%E0%B8%A5%E0%B8%B2%E0%B8%94%E0%B8%82%E0%B8%AD%E0%B8%87%E0%B9%80%E0%B8%81%E0%B9%88%E0%B8%B2-%E0%B8%95%E0%B8%A5%E0%B8%B2%E0%B8%94%E0%B8%99%E0%B8%B1%E0%B8%94.jpg' },
+  { id: '3', title: 'เทศกาลดนตรีกลางคืน', category: 'ดนตรีและคอนเสิร์ต', date: '28 ก.พ. 2569', distance: '3.5 กม.', image: 'https://images.unsplash.com/photo-1492684223066-81342ee5ff30?q=80&w=500' },
+  { id: '4', title: 'เทศกาลอาหารไทย', category: 'อาหารและเครื่องดื่ม', date: '10 มี.ค. 2569', distance: '2.0 กม.', image: 'https://images.unsplash.com/photo-1504674900247-0877df9cc836?q=80&w=500' },
+  { id: '5', title: 'นิทรรศการศิลปะดิจิทัล', category: 'ศิลปะและนิทรรศการ', date: '1-30 พ.ค. 2569', distance: '4.5 กม.', image: 'https://images.unsplash.com/photo-1547891654-e66ed7ebb968?q=80&w=500' },
+  { id: '6', title: 'Pet Lover Fair 2026', category: 'สัตว์เลี้ยง', date: '15-18 พ.ค. 2569', distance: '6.0 กม.', image: 'https://images.unsplash.com/photo-1450778869180-41d0601e046e?q=80&w=500' },
+  { id: '7', title: 'เวิร์กชอปปั้นเซรามิกมินิมอล', category: 'เวิร์กชอปและสัมมนา', date: 'ทุกเสาร์-อาทิตย์', distance: '2.8 กม.', image: 'https://images.unsplash.com/photo-1610701596007-11502861dcfa?q=80&w=500' },
+  { id: '8', title: 'วิ่งมาราธอน ซิตี้รัน', category: 'กีฬาและเอาท์ดอร์', date: '12 เม.ย. 2569', distance: '5.0 กม.', image: 'https://plus.unsplash.com/premium_photo-1663134254080-a3e9f79ae748?q=80&w=1708&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D' },
+  { id: '9', title: 'อาสาปลูกป่าชายเลน บางปู', category: 'ชุมชนและจิตอาสา', date: '20 ส.ค. 2569', distance: '25 กม.', image: 'https://images.unsplash.com/photo-1622383563227-04401ab4e5ea?q=80&w=774&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D' },
+  { id: '10', title: 'แคมป์ปิ้งดูดาว เขาใหญ่', category: 'ท่องเที่ยวธรรมชาติ', date: '5-7 ธ.ค. 2569', distance: '120 กม.', image: 'https://images.unsplash.com/flagged/photo-1562307294-4060df701fa3?q=80&w=1016&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D' },
+  { id: '11', title: 'งานเซลล์แบรนด์เนมประจำปี', category: 'ตลาดและช้อปปิ้ง', date: '1-5 ก.ค. 2569', distance: '1.5 กม.', image: 'https://images.unsplash.com/photo-1768775036854-75341e3a022b?q=80&w=1768&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D' },
+  { id: '12', title: 'คอนเสิร์ตอินดี้ในสวน', category: 'ดนตรีและคอนเสิร์ต', date: '5 เม.ย. 2569', distance: '2.5 กม.', image: 'https://images.unsplash.com/photo-1749544292533-65b0ec299191?q=80&w=1750&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D' }
 ];
 
-// 🌟 อัปเดตตัวกรองให้ตรงกับชื่อหมวดหมู่
 const FILTERS = [
   'ทั้งหมด', 'อาหารและเครื่องดื่ม', 'ตลาดและช้อปปิ้ง', 'ดนตรีและคอนเสิร์ต', 
   'เทศกาลและงานวัด', 'กีฬาและเอาท์ดอร์', 'ศิลปะและนิทรรศการ', 'สัตว์เลี้ยง', 'ท่องเที่ยวธรรมชาติ'
