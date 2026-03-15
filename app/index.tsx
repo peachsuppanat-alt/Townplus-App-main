@@ -19,7 +19,7 @@ export default function LoginScreen() {
 
    //ใส่ ip ให้เป็น wifi เดียวกันกับ server และมือถือ
     try {
-      const response = await fetch('http://192.168.1.34:5000/api/login', {
+      const response = await fetch('http://192.168.174.35:3000/login', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email: email, password: password })

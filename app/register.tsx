@@ -19,15 +19,14 @@ export default function RegisterScreen() {
 
     try {
       // 2. ส่งข้อมูลไปที่ Backend
-      const response = await fetch('http://192.168.1.34:5000/api/register', {
+      const response = await fetch('http://192.168.174.35:3000/register', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ 
-          fullname: username, // ใช้ username แทน fullname ไปก่อน
-          username: username, 
+          first_name: username, // เอาสิ่งที่พิมพ์ในช่อง Username มาใส่เป็นชื่อจริงไปก่อน
+          last_name: '',        // นามสกุลปล่อยว่างไว้
           email: email, 
-          password: password, 
-          dob: '', gender: '', phone: '', address: '' // ส่งค่าว่างไปให้ครบตามตาราง SQL
+          password: password 
         }),
       });
       
